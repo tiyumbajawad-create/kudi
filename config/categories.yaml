@@ -1,0 +1,62 @@
+# Kudi category taxonomy — versioned so users can extend it (design doc §3).
+# Two levels: root > leaf. The classifier trains against the leaves.
+version: 1
+
+Income:
+  - Salary
+  - Interest
+
+Housing:
+  - Rent
+  - Mortgage
+
+Utilities:
+  - Electricity
+  - Water
+  - Internet
+  - Phone
+
+Food & Drink:
+  - Groceries
+  - Coffee
+  - Restaurants
+  - Fast Food
+  - Bars
+
+Transport:
+  - Gas
+  - Rideshare
+  - Public Transit
+  - Parking
+
+Shopping:
+  - General Merchandise
+  - Electronics
+  - Clothing
+  - Home Goods
+
+Health:
+  - Pharmacy
+  - Medical
+  - Fitness
+
+Entertainment:
+  - Streaming
+  - Movies
+  - Games
+
+Travel:
+  - Flights
+  - Hotels
+  - Rental Car
+
+Fees & Interest:
+  - Bank Fees
+  - Interest Charges
+
+Transfers:
+  - Internal Transfer
+  - Credit Card Payment
+
+Other:
+  - Uncategorized
