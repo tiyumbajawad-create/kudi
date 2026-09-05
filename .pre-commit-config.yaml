@@ -1,0 +1,26 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.9.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [pydantic>=2.6]
+
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.7.1
+    hooks:
+      - id: nbstripout
+
+  - repo: local
+    hooks:
+      - id: no-real-data
+        name: block committed account/CSV export data
+        entry: bash -c '! grep -RIlE "([0-9]{4}[- ]){3}[0-9]{4}|account[_ ]?number" --exclude-dir=.git --exclude-dir=tests --exclude-dir=datagen . || (echo "Possible real financial data staged - see SECURITY.md" && exit 1)'
+        language: system
+        pass_filenames: false

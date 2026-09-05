@@ -1,0 +1,32 @@
+# data (real or generated — never committed)
+data/*
+!data/.gitkeep
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+
+# tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# notebooks
+.ipynb_checkpoints/
+
+# db
+*.db
+*.sqlite3
+
+# secrets
+.env
+*.pem
+
+# os
+.DS_Store
