@@ -27,12 +27,10 @@ jobs:
           ruff format --check .
 
       - name: Type check (mypy --strict)
-        run: mypy src
+        run: mypy src datagen scripts
 
       - name: Test with coverage
-        # NOTE: coverage gate is off during M0 (skeleton only, most modules are
-        # empty stubs). Re-enable `--cov-fail-under=90` once M2/M3 land real code.
-        run: pytest
+        run: pytest --cov-fail-under=90
 
       - name: Dependency audit
         run: pip-audit || true # informational until lockfile is pinned

@@ -1,0 +1,39 @@
+# Curated rule table for high-frequency merchants (design doc §5.2, step
+# 2). Deterministic and explainable: these merchants get categorized
+# without ever touching the ML classifier. Roughly half the catalog is
+# covered here; the rest is deliberately left for the classifier so
+# there's something real to evaluate in §5.3.
+version: 1
+
+by_merchant_norm:
+  "Meridian Properties": "Housing>Rent"
+  "Georgia Power": "Utilities>Electricity"
+  "City Water Dept": "Utilities>Water"
+  "Xfinity Internet": "Utilities>Internet"
+  "Verizon Wireless": "Utilities>Phone"
+  "Anytime Fitness": "Health>Fitness"
+  "Netflix": "Entertainment>Streaming"
+  "Spotify": "Entertainment>Streaming"
+  "Acme Corp Payroll": "Income>Salary"
+  "Ally Bank Interest": "Income>Interest"
+  "Kroger": "Food & Drink>Groceries"
+  "Whole Foods Market": "Food & Drink>Groceries"
+  "Blue Bottle Coffee": "Food & Drink>Coffee"
+  "Starbucks": "Food & Drink>Coffee"
+  "Chipotle": "Food & Drink>Fast Food"
+  "Chick-fil-A": "Food & Drink>Fast Food"
+  "Shell Oil": "Transport>Gas"
+  "Chevron": "Transport>Gas"
+  "Chase Bank Fee": "Fees & Interest>Bank Fees"
+  "Chase Interest Charge": "Fees & Interest>Interest Charges"
+
+# Fallback for descriptors that carry no merchant-identifying text at
+# all -- e.g. a bank's own system-generated fee/interest line. These
+# can't be resolved by merchant normalization (there's no merchant name
+# in the string), so they're matched on the raw description directly.
+# Checked case-insensitively as a substring.
+by_raw_keyword:
+  "OVERDRAFT FEE": "Fees & Interest>Bank Fees"
+  "MONTHLY SERVICE FEE": "Fees & Interest>Bank Fees"
+  "INTEREST CHARGE ON PURCHASES": "Fees & Interest>Interest Charges"
+  "INTEREST PAYMENT": "Income>Interest"

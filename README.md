@@ -3,7 +3,7 @@
 > Categorizes transactions, flags fraud-like anomalies, and detects
 > subscriptions from bank exports — local-first, zero-cost demo.
 
-**Status:** M2 — ingestion pipeline. Design doc lives at `DESIGN.md`.
+**Status:** M3 — categorization. Design doc lives at `DESIGN.md`.
 
 ## What this is
 
@@ -67,6 +67,31 @@ converging on the canonical `Transaction` schema. The pipeline
   counter keeps legitimately identical same-day transactions from colliding.
 - **Store** (`src/kudi/store/`) is SQLite via SQLAlchemy, upserting on
   `txn_id` so nothing is ever double-inserted.
+
+## Categorization
+
+Layered, cheapest-first (`src/kudi/enrich/`): user corrections override
+everything; a curated rule table (`config/category_rules.yaml`) handles
+~20 high-frequency merchants deterministically; everything else falls
+to a calibrated char n-gram TF-IDF classifier; below a confidence
+threshold, transactions get an honest `Other>Uncategorized` rather than
+a wrong confident guess.
+
+The trained artifact and its model card live in `models/` (small enough
+to commit — `make demo` needs no training step). Retrain with:
+
+```bash
+python -m scripts.train_categorizer
+```
+
+The evaluation is grouped by merchant, not by row (§5.3) — held-out test
+merchants are never seen in training — and the model card documents
+this honestly: on this demo's small classifier-zone catalog, the
+headline macro-F1 doesn't hit the design doc's target, and the card
+explains exactly why (some categories only have one same-category
+example to generalize from) rather than papering over it. A deliberately
+*wrong* naive row-split baseline is included side-by-side to make the
+train/test leakage effect visible, not just asserted.
 
 ## Status / roadmap
 

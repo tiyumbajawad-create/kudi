@@ -11,7 +11,7 @@ lint:
 	ruff format --check .
 
 typecheck:
-	mypy src
+	mypy src datagen scripts
 
 data:
 	python -m datagen.generate --seed 42 --out data/
