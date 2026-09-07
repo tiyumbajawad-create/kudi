@@ -3,7 +3,7 @@
 > Categorizes transactions, flags fraud-like anomalies, and detects
 > subscriptions from bank exports — local-first, zero-cost demo.
 
-**Status:** M1 — synthetic data generator. Design doc lives at `DESIGN.md`.
+**Status:** M2 — ingestion pipeline. Design doc lives at `DESIGN.md`.
 
 ## What this is
 
@@ -50,6 +50,23 @@ recurring-charge series with jitter, skipped cycles, and price hikes —
 all recorded in `labels.parquet` so later milestones have honest ground
 truth to evaluate against. Generation is seeded and fully deterministic:
 `make data SEED=42` reproduces the dataset byte-for-byte.
+
+## Ingestion pipeline
+
+Each of the 5 source formats has its own parser under `src/kudi/ingest/parsers/`,
+converging on the canonical `Transaction` schema. The pipeline
+(`src/kudi/ingest/pipeline.py`) runs: **detect → parse → dedupe → persist**.
+
+- **Detection** (`detect.py`) sniffs an OFX tag probe first, then CSV header
+  fingerprinting — exact match, falling back to per-field fuzzy matching with
+  a column-count penalty. Below a confidence threshold it refuses to guess
+  and reports the headers it saw, rather than silently mis-parsing money data.
+- **Dedup** (`dedupe.py`) is idempotent by design: re-ingesting the same file,
+  or an overlapping export window, is a no-op. FITID (when a format provides
+  one, like OFX) wins over the computed content hash; a per-file occurrence
+  counter keeps legitimately identical same-day transactions from colliding.
+- **Store** (`src/kudi/store/`) is SQLite via SQLAlchemy, upserting on
+  `txn_id` so nothing is ever double-inserted.
 
 ## Status / roadmap
 
