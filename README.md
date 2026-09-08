@@ -3,7 +3,7 @@
 > Categorizes transactions, flags fraud-like anomalies, and detects
 > subscriptions from bank exports — local-first, zero-cost demo.
 
-**Status:** M3 — categorization. Design doc lives at `DESIGN.md`.
+**Status:** M4 — anomaly + recurring detection. Design doc lives at `DESIGN.md`.
 
 ## What this is
 
@@ -92,6 +92,34 @@ explains exactly why (some categories only have one same-category
 example to generalize from) rather than papering over it. A deliberately
 *wrong* naive row-split baseline is included side-by-side to make the
 train/test leakage effect visible, not just asserted.
+
+## Anomaly + recurring detection
+
+`src/kudi/detect/` implements both detectors from §6-7:
+
+- **Anomaly detection** — two layers, combined as `max(rule_score,
+  forest_score)`: interpretable per-signal scores (amount outlier,
+  new merchant, velocity burst, duplicate charge, geo mismatch,
+  day-of-week deviation) plus an Isolation Forest over engineered
+  features. Fit fresh per account at analysis time — this is
+  *personal* anomaly detection, so there's no single global model to
+  ship. Cold-start accounts (<30 transactions or <30 days of history)
+  get a conservative subset of high-precision rules only.
+- **Recurring-charge inference** — deliberately statistical, not ML:
+  period-template matching (weekly/biweekly/monthly/quarterly/annual)
+  combined with amount-consistency scoring. Derived alerts cover price
+  hikes, missed charges, duplicate billing, and a subscription audit
+  report.
+
+Evaluated against the synthetic generator's own injected ground truth
+across 5 seeds (`python -m scripts.evaluate_detectors` →
+`docs/m4_eval_report.md`). Recurring detection clears every §7.3
+target (precision 0.97, recall 0.88, next-date MAE 0.15 days).
+Anomaly detection lands close to but just under its precision@10
+target (0.57 vs. 0.6) — the eval report documents two real bugs found
+and fixed while measuring this (not by inspection), and is upfront
+about where the number still falls short and why, rather than only
+reporting the parts that look good.
 
 ## Status / roadmap
 
