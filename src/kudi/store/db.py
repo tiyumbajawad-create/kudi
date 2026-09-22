@@ -36,9 +36,23 @@ class TransactionORM(Base):
 
     anomaly_score: Mapped[float | None] = mapped_column(nullable=True)
     anomaly_reasons_json: Mapped[str] = mapped_column(String, default="[]")
+    anomaly_acked: Mapped[bool] = mapped_column(default=False)
 
     source_format: Mapped[str] = mapped_column(String)
     ingested_at: Mapped[datetime] = mapped_column(DateTime)
+
+
+class CorrectionORM(Base):
+    """User re-categorizations, keyed by merchant_norm (design doc §3):
+    'corrections override model output on future ingests and become
+    training data.' category_source="user" transactions are never
+    overwritten by a later rule/model pass -- see repository.py."""
+
+    __tablename__ = "corrections"
+
+    merchant_norm: Mapped[str] = mapped_column(String, primary_key=True)
+    category: Mapped[str] = mapped_column(String)
+    corrected_at: Mapped[datetime] = mapped_column(DateTime)
 
 
 def get_engine(db_path: str = "kudi.db") -> Engine:

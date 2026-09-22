@@ -56,7 +56,7 @@ extend-exclude = ["*.md"]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.ruff.lint.flake8-bugbear]
-extend-immutable-calls = ["typer.Option", "typer.Argument"]
+extend-immutable-calls = ["typer.Option", "typer.Argument", "fastapi.Depends"]
 
 [tool.mypy]
 python_version = "3.12"
