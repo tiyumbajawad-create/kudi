@@ -3,7 +3,7 @@
 > Categorizes transactions, flags fraud-like anomalies, and detects
 > subscriptions from bank exports — local-first, zero-cost demo.
 
-**Status:** M4 — anomaly + recurring detection. Design doc lives at `DESIGN.md`.
+**Status:** M5 — serving + polish. Design doc lives at `DESIGN.md`.
 
 ## What this is
 
@@ -19,6 +19,53 @@ them into a canonical schema, and runs three ML capabilities over them:
 Everything runs locally on synthetic data with zero paid dependencies. An
 appendix in `DESIGN.md` maps every component onto AWS services for a cloud
 deployment.
+
+## Architecture
+
+```
+ 5 bank export formats                                  Two entry points,
+ (Chase/BoA/Capital One/                                 one service layer
+  generic credit/OFX)                                    (no duplicated logic)
+        │
+        ▼
+ ┌─────────────┐    ┌──────────────┐    ┌─────────────────────────────┐
+ │   detect    │───▶│    parse     │───▶│      dedupe + persist       │
+ │ (format     │    │ (5 parsers,  │    │  (txn_id hash or FITID,     │
+ │  sniffing)  │    │  §4)         │    │   SQLite via SQLAlchemy)    │
+ └─────────────┘    └──────────────┘    └──────────────┬──────────────┘
+                                                          │
+                                                          ▼
+                                            ┌───────────────────────────┐
+                                            │      enrich_all()         │
+                                            │  (src/kudi/service.py)    │
+                                            │                           │
+                                            │  1. transfer detection    │
+                                            │     (cross-account)       │
+                                            │  2. categorize            │
+                                            │     (corrections > rules  │
+                                            │      > classifier)        │
+                                            │  3. recurring inference   │
+                                            │  4. anomaly detection     │
+                                            │     (recurring-aware)     │
+                                            └─────────────┬─────────────┘
+                                                          │
+                                        ┌─────────────────┴─────────────────┐
+                                        ▼                                   ▼
+                              ┌───────────────────┐             ┌───────────────────┐
+                              │      kudi CLI      │             │    FastAPI app     │
+                              │ ingest|report|      │             │ /ingest /transactions│
+                              │ anomalies|          │             │ /anomalies /recurring│
+                              │ subscriptions       │             │ /insights/summary   │
+                              └───────────────────┘             └───────────────────┘
+```
+
+Both entry points call the exact same `src/kudi/service.py` functions —
+neither duplicates enrichment logic, per §9.
+
+*(The design doc's README checklist (§2, §12) also calls for a demo
+GIF alongside this diagram. That's a screen recording of the actual
+terminal output — not something generated as part of building the
+repo — so it's left as a follow-up rather than faked.)*
 
 ## Quickstart
 
@@ -120,6 +167,44 @@ target (0.57 vs. 0.6) — the eval report documents two real bugs found
 and fixed while measuring this (not by inspection), and is upfront
 about where the number still falls short and why, rather than only
 reporting the parts that look good.
+
+## Serving layer
+
+Both the CLI and the FastAPI app are thin wrappers around
+`src/kudi/service.py` — ingestion and enrichment logic lives in exactly
+one place (§9).
+
+**CLI** (`kudi <command>`, or `python -m kudi.cli <command>`):
+
+```bash
+kudi ingest data/generated/chase_csv/*.csv --db data/kudi.db
+kudi report --account-id chase-checking --db data/kudi.db
+kudi anomalies --account-id chase-checking --min-score 0.9 --db data/kudi.db
+kudi subscriptions --account-id chase-checking --db data/kudi.db
+```
+
+**API** (`make serve`, then see `/docs` for interactive OpenAPI docs):
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /ingest` | multipart file upload → `IngestReport` per file |
+| `GET /transactions` | filter by account/category/min-anomaly-score; paginated |
+| `POST /transactions/{id}/category` | user correction (persisted, never re-clobbered) |
+| `GET /anomalies` | ranked alerts with reasons |
+| `POST /anomalies/{id}/ack` | suppress re-alerting for one transaction |
+| `GET /recurring` | subscription audit + price-hike/missed-charge/duplicate-billing alerts |
+| `GET /insights/summary` | monthly totals by category |
+| `GET /healthz`, `GET /version` | ops hygiene |
+
+Both are tested directly: `tests/test_cli.py` (typer's `CliRunner`) and
+`tests/test_api.py` (httpx against the app in-process, §11) — not just
+tested indirectly through `service.py`'s own tests.
+
+## Security
+
+See [`SECURITY.md`](./SECURITY.md) for the threat model, data-hygiene
+tooling (pre-commit grep guard, gitignored `data/`), and what's
+explicitly out of scope.
 
 ## Status / roadmap
 
